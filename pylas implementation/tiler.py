@@ -66,6 +66,8 @@ def rootJson(bounds, pointCount, id="root"):
     data['geometricError'] = computeApproximateGeometricError(bounds, 0.001, pointCount) * \
         0.1
 
+    
+
     if (id == "root"):
         data['content'] = {}
         data['content']['uri'] = 'root.pnts'
@@ -94,7 +96,7 @@ def moveTilesAndTileset(to):
     for f in os.listdir("output/"):
         if (f.endswith(".json") or f.endswith(".pnts")):
             os.replace(
-                "output/" + f, r"C:/Users/Ajay/Desktop/py3dtiles/3D-TileSet-Viewer/public/test/" + f)
+                "output/" + f, r"C:/Users/Lenovo/Desktop/3D-TileSet-Viewer/public/test/" + f)
 
 
 def eightbitify(colour):

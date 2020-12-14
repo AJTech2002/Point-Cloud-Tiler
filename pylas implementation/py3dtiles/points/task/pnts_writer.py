@@ -3,7 +3,6 @@ import pickle
 import struct
 import os
 import py3dtiles
-import lz4.frame as gzip
 from py3dtiles.points.utils import name_to_filename
 
 
@@ -60,6 +59,8 @@ def node_to_pnts(name, node, out_folder, include_rgb):
 
 
 def run(sender, data, node_name, folder, write_rgb):
+
+    import lz4 as gzip
     # we can safely write the .pnts file
     if len(data):
         root = pickle.loads(gzip.decompress(data))
