@@ -1,6 +1,9 @@
 import pylas
 import sys
 from pylas import lasreader
+from nodestore import nodestore
+from node import node
+import progress as prog
 
 
 def exportToXYZ(points):
@@ -8,8 +11,8 @@ def exportToXYZ(points):
     with open("output/root.xyz", "w") as writer:
         for pnt in points:
             x, y, z = pnt
-            writer.write(str(x) + " " +
-                         str(y) + " " + str(z) + "\n")
+            writer.write(str(x) + " "
+                         + str(y) + " " + str(z) + "\n")
 
 
 def boundingBox(bounds):
@@ -32,59 +35,89 @@ def computeApproximateGeometricError(bounds, pointScale, pointCount):
     return (x * y * z) / max((pointCount * pointScale), 1)
 
 
-def exportToPnts(points=[]):
+totalCount = 0
+
+
+def exportToPnts(root: node, store: nodestore):
+    global totalCount
     import py3dtiles.points.task.pnts_writer as writer
     import numpy as np
 
-    totalPoints = []
-    totalColors = []
+    if (root.hasSubdivided == False):
+        totalPoints = []
+        totalColors = []
 
-    for p in points:
-        x, y, z, r, g, b = p
-        totalPoints.append(x)
-        totalPoints.append(y)
-        totalPoints.append(z)
+        for p in store.returnPointIterator(root.strId):
 
-        totalColors.append(r)
-        totalColors.append(g)
-        totalColors.append(b)
+            try:
+                totalCount += 1
+                x, y, z, r, g, b = p
+                totalPoints.append(x)
+                totalPoints.append(y)
+                totalPoints.append(z)
 
-    arr = np.concatenate(
-        (np.array(totalPoints, dtype=np.float32).view(np.uint8).ravel(), np.array(totalColors, dtype=np.uint8).ravel()))
-    writer.points_to_pnts(
-        'root', arr, "output", True)
+                totalColors.append(r)
+                totalColors.append(g)
+                totalColors.append(b)
+            except:
+                print(list(p))
+
+        arr = np.concatenate(
+            (np.array(totalPoints, dtype=np.float32).view(np.uint8).ravel(), np.array(totalColors, dtype=np.uint8).ravel()))
+        writer.points_to_pnts(
+            'tile-{}'.format(root.strId), arr, "output", True)
+    else:
+        for b in root.children:
+            exportToPnts(b, store)
 
 
-def rootJson(bounds, pointCount, id="root"):
+def rootJson(root: node, store: nodestore):
+
     data = {}
-    data['refine'] = "REFINE" if (id == "root") else "ADD"
-    arr = boundingBox(bounds)
+    data['refine'] = "REFINE" if (root.id == 0) else "ADD"
+    arr = boundingBox(root.bounds)
     data['boundingVolume'] = {}
     data['boundingVolume']['box'] = [arr[0], arr[1],
                                      arr[2], arr[3], 0, 0, 0, arr[4], 0, 0, 0, arr[5]]
 
-    data['geometricError'] = computeApproximateGeometricError(bounds, 0.001, pointCount) * \
-        0.1
+    data['geometricError'] = root.computeApproximateGeometricError()
 
-    
-
-    if (id == "root"):
+    if root.hasSubdivided == False:
         data['content'] = {}
-        data['content']['uri'] = 'root.pnts'
+        data['content']['uri'] = 'tile-' + root.strId + '.pnts'
+
+    else:
+        arr = []
+        for c in root.children:
+            jsonF = rootJson(c, store)
+            if (jsonF != None):
+                arr.append(jsonF)
+        if (len(arr) > 0):
+            data['children'] = arr
 
     return data
 
 
-def outputTileset(bounds, pointCount):
+def clearTemps():
+    import os
+    if (os.path.exists("output/tmp")):
+        for f in os.listdir("output/tmp"):
+            if (f.endswith(".tmp")):
+                os.remove("output/tmp/" + f)
+        for f in os.listdir("output"):
+            if (f.endswith(".pnts") or f.endswith(".json")):
+                os.remove("output/" + f)
+
+
+def outputTileset(bounds, pointCount, root: node, store: nodestore):
     import json
     data = {}
     data['asset'] = {}
     data['asset']['version'] = "1.0"
 
-    data['geometricError'] = computeApproximateGeometricError(
-        bounds, 0.001, pointCount)*0.1
+    data['geometricError'] = root.computeApproximateGeometricError()
 
-    data['root'] = rootJson(bounds, pointCount)
+    data['root'] = rootJson(root, store)
 
     with open('output/tileset.json', 'w') as outfile:
         json.dump(data, outfile)
@@ -102,7 +135,7 @@ def moveTilesAndTileset(to):
 def eightbitify(colour):
     import numpy as np
     notzero = np.where(colour > 0)
-    colour[notzero] = (colour[notzero]/255) - 1
+    colour[notzero] = (colour[notzero] / 255) - 1
     return colour
 
 
@@ -117,14 +150,36 @@ def readPoints(reader: lasreader.LasReader):
     points = zip(data.x, data.y, data.z,
                  eightbitify(data.points['red']), eightbitify(data.points['green']), eightbitify(data.points['blue']))
 
-    exportToPnts(points)
-    outputTileset({
+    store = nodestore(int(sys.argv[3]), None)
+    root = node({
         'min': minBounds,
         'max': maxBounds
-    }, len(data.points))
+    }, 0, 0.5, int(sys.argv[2]), store)
+
+    for (i, p) in enumerate(points):
+        root.addPoint(p)
+        prog.printProgressBar(i, len(data.points), 'Progress')
+
+    exportToPnts(root, store)
+    outputTileset(boundingBox({
+        'min': minBounds,
+        'max': maxBounds
+    }), len(data.points), root, store)
 
     moveTilesAndTileset("")
 
+    global totalCount
+    print()
+    print("TOTAL : " + str(totalCount) + " vs DENSITY : " + str(root.density))
 
+
+print("WARNING (RECURSION LIMIT) : " + str(sys.getrecursionlimit()))
+
+clearTemps()
 with pylas.open(sys.argv[1], "r") as f:
     readPoints(f)
+
+
+##TODO : 
+# 1. Recursion isn't efficient in Python (change to iterative using contigious array) [Node Catalog]
+# 2. Therad the file stream

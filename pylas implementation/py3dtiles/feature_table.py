@@ -171,7 +171,7 @@ class FeatureTableHeader(object):
             dtz = positions_dtype['Z']
             fth.positions_offset = 0
             if (dtx == np.float32 and dty == np.float32 and dtz == np.float32):
-                print("NOT QUANTISED")
+                #print("NOT QUANTISED")
                 fth.positions = SemanticPoint.POSITION
                 fth.positions_dtype = np.dtype([('X', np.float32),
                                                 ('Y', np.float32),

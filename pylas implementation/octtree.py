@@ -38,7 +38,7 @@ class oct_block:
 
         self.childrenPoints.append(child)
 
-        #globalLimit // 10
+        # globalLimit // 10
         # if (len(self.childrenPoints) > 0 or self.count >= globalLimit - 2):
         #     lines = []
         #     for child in self.childrenPoints:
@@ -47,7 +47,7 @@ class oct_block:
         #     writer.writelines(lines)
 
         #     self.childrenPoints = []
-        #writer.write(str(child['x']) + "," + str(child['y']) + "," + str(child['z']) + "\n")
+        # writer.write(str(child['x']) + "," + str(child['y']) + "," + str(child['z']) + "\n")
 
     def getCurrentPointCount(self):
         # return len(linecache.getlines(self.path))
@@ -88,7 +88,7 @@ class oct_block:
 
         global globalTileCount
 
-        #print("COUNT : " + str(self.count) + " FINAL : " + str(len(self.getPointIterator())))
+        # print("COUNT : " + str(self.count) + " FINAL : " + str(len(self.getPointIterator())))
 
         half_x = (self.bounds['max'][0] - self.bounds['min'][0]) / 2
         half_y = (self.bounds['max'][1] - self.bounds['min'][1]) / 2
@@ -123,12 +123,12 @@ class oct_block:
 
                     self.childrenBlocks.append(child_oct)
 
-        #self.count -= len(self.getPointIterator())
+        # self.count -= len(self.getPointIterator())
 
-        #print("C " + str(self.count) + " v " + str(len(self.getPointIterator())))
+        # print("C " + str(self.count) + " v " + str(len(self.getPointIterator())))
 
         for p in self.childrenPoints:
-            #point = self.convertStringToPoint(p)
+            # point = self.convertStringToPoint(p)
             self.placeInChild(p)
 
         # Ensure clear
@@ -141,10 +141,6 @@ class oct_block:
             and (float(point['y']) >= float(self.bounds['min'][1]) and float(point['y']) <= float(self.bounds['max'][1]))
             and (float(point['z']) >= float(self.bounds['min'][2]) and float(point['z']) <= float(self.bounds['max'][2]))
         )
-
-    def dist(self, a, b):
-        import math
-        return math.sqrt((math.pow(a['x'] - b['x'], 2)) + (math.pow(a['y'] - b['y'], 2)) + (math.pow(a['z'] - b['z'], 2)))
 
     def computeAverageGeometricError(self, detail):
 
@@ -162,6 +158,10 @@ class oct_block:
 
         return (avgError / count)
 
+
+def dist(self, a, b):
+        import math
+        return math.sqrt((math.pow(a['x'] - b['x'], 2)) + (math.pow(a['y'] - b['y'], 2)) + (math.pow(a['z'] - b['z'], 2)))
     def computeApproximateGeometricError(self, pointScale=0.001):
         x = (self.bounds['max'][0] - self.bounds['min'][0])
         y = (self.bounds['max'][1] - self.bounds['min'][1])
@@ -352,7 +352,7 @@ class oct_block:
             import time
 
             # if (len(self.childrenPoints) > 0):
-            #print("ERROR POINTS REMAINING")
+            # print("ERROR POINTS REMAINING")
             #   time.sleep(0.001)
 
             if (self.id == "root"):
