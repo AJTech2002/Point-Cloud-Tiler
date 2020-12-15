@@ -17,18 +17,24 @@ class _DummyNode():
             self.points = _bytes['points']
 
 
-def points_to_pnts(name, points, out_folder, include_rgb):
+def points_to_pnts(name, points, out_folder, include_rgb, rtc=None):
     count = int(len(points) / (3 * 4 + (3 if include_rgb else 0)))
 
     if count == 0:
         return 0, None
     # print(points)
     pdt = np.dtype([('X', '<f4'), ('Y', '<f4'), ('Z', '<f4')])
-    cdt = np.dtype([('Red', 'u1'), ('Green', 'u1'), ('Blue', 'u1')]) if include_rgb else None
+    cdt = np.dtype([('Red', 'u1'), ('Green', 'u1'),
+                    ('Blue', 'u1')]) if include_rgb else None
 
     ft = py3dtiles.feature_table.FeatureTable()
-    ft.header = py3dtiles.feature_table.FeatureTableHeader.from_dtype(pdt, cdt, count)
-    ft.body = py3dtiles.feature_table.FeatureTableBody.from_array(ft.header, points)
+    ft.header.rtc = rtc
+
+    ft.header = py3dtiles.feature_table.FeatureTableHeader.from_dtype(
+        pdt, cdt, count)
+
+    ft.body = py3dtiles.feature_table.FeatureTableBody.from_array(
+        ft.header, points)
 
     body = py3dtiles.pnts.PntsBody()
     body.feature_table = ft
@@ -38,8 +44,8 @@ def points_to_pnts(name, points, out_folder, include_rgb):
     tile.header = py3dtiles.pnts.PntsHeader()
     tile.header.sync(body)
 
-    filename = name_to_filename(out_folder, name, '.pnts')
-    #filename = out_folder + "/" + name + ".pnts"
+    #filename = name_to_filename(out_folder, name, '.pnts')
+    filename = out_folder + "/" + name + ".pnts"
     assert not os.path.exists(filename), '{} already written'.format(filename)
 
     tile.save_as(filename)
